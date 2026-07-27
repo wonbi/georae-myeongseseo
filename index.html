@@ -341,22 +341,16 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
     </div>
 
     <div class="card">
-      <h2>택배비 · 세금 정산</h2>
+      <h2>택배비 · 정산 <span class="sub">공급가 그대로 계산 · 세액 없음</span></h2>
       <div class="body">
         <div class="inline" style="margin-bottom:11px">
           <label class="chk"><input type="checkbox" id="shipInclude" checked> 택배비를 명세서에 포함</label>
           <label class="chk"><input type="checkbox" id="shipManual"> 금액 직접 입력</label>
-          <label class="chk"><input type="checkbox" id="shipTaxable" checked> 택배비 과세(VAT 10%)</label>
+          <label class="chk"><input type="checkbox" id="shipTaxable" checked> 택배비를 과세로 분류</label>
         </div>
-        <div class="grid g3" style="margin-bottom:11px">
+        <div class="grid g2" style="margin-bottom:11px">
           <div class="f"><label>택배비 합계</label><input id="shipAmount" class="num" style="text-align:right" disabled></div>
           <div class="f"><label>택배비 산정</label><input id="shipDesc" disabled placeholder="품목별 합산"></div>
-          <div class="f"><label>단가 기준</label>
-            <select id="priceMode">
-              <option value="incl">부가세 포함가 (단가 안에 세액이 들어있음)</option>
-              <option value="excl">부가세 별도 (단가에 세액을 더함)</option>
-            </select>
-          </div>
         </div>
         <div class="inline" style="margin-bottom:11px">
           <label class="chk"><input type="checkbox" id="showBalance"> 전잔금 / 입금액 / 미수금 표시</label>
@@ -365,17 +359,16 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
           <div class="f"><label>전잔금</label><input id="balPrev" class="num" style="text-align:right" value="0"></div>
           <div class="f"><label>입금액</label><input id="balPaid" class="num" style="text-align:right" value="0"></div>
         </div>
-        <div class="f"><label>비고 / 특기사항</label><textarea id="m_note" placeholder="예) 상기 금액은 부가세 포함 금액입니다."></textarea></div>
+        <div class="f"><label>비고 / 특기사항</label><textarea id="m_note" placeholder="예) 상기 금액은 공급가 기준이며, 입금 확인 후 출고됩니다."></textarea></div>
 
         <div class="totals" style="margin-top:14px">
           <div>
-            <div class="trow"><span>공급가액 소계</span><b id="t_supply">0</b></div>
-            <div class="trow"><span>&nbsp;└ 과세분</span><b id="t_taxable">0</b></div>
-            <div class="trow"><span>&nbsp;└ 면세분</span><b id="t_free">0</b></div>
+            <div class="trow"><span>과세 품목</span><b id="t_taxable">0</b></div>
+            <div class="trow"><span>면세 품목</span><b id="t_free">0</b></div>
+            <div class="trow"><span>품목 소계</span><b id="t_supply">0</b></div>
           </div>
           <div>
             <div class="trow"><span>택배비</span><b id="t_ship">0</b></div>
-            <div class="trow"><span>부가세액</span><b id="t_vat">0</b></div>
             <div class="trow big"><span>합계금액</span><b id="t_total">0</b></div>
           </div>
         </div>
@@ -542,8 +535,6 @@ const state = {
   supplier:{}, buyer:{},
   items:[],
   ship:{ include:true, manual:false, taxable:true, amount:0 },
-  /* 시트의 공급가는 과세 상품도 부가세가 포함된 최종가라, 세액을 더하지 않고 역산한다 */
-  priceMode:'incl',
   balance:{ show:false, prev:0, paid:0 }
 };
 
@@ -676,39 +667,28 @@ function rowEl(it,idx){
 /* =========================================================
    계산
    ========================================================= */
+/* 공급가는 그대로 쓴다. 세액 계산은 없고, 과세/면세는 분류 표시일 뿐이다. */
 function lineSupply(it){
-  const gross = (it.qty||0)*(it.price||0);
-  if(state.priceMode==='incl' && it.taxable) return Math.round(gross/1.1);
-  return gross;
-}
-function lineVat(it){
-  if(!it.taxable) return 0;
-  const gross=(it.qty||0)*(it.price||0);
-  return state.priceMode==='incl' ? gross-Math.round(gross/1.1) : Math.round(gross*0.1);
+  return (it.qty||0)*(it.price||0);
 }
 function autoShip(){
   return state.items.reduce((s,it)=> s + (it.name ? (it.fee||0) : 0), 0);
 }
 
 function totals(){
-  let supply=0, vat=0, taxable=0, free=0;
+  let supply=0, taxable=0, free=0;
   for(const it of state.items){
     if(!it.name && !it.price) continue;
-    const s=lineSupply(it), v=lineVat(it);
-    supply+=s; vat+=v;
+    const s=lineSupply(it);
+    supply+=s;
     if(it.taxable) taxable+=s; else free+=s;
   }
-  let ship=0, shipVat=0;
+  let ship=0;
   if(state.ship.include){
     ship = state.ship.manual ? (state.ship.amount||0) : autoShip();
-    if(state.ship.taxable){
-      shipVat = state.priceMode==='incl' ? ship-Math.round(ship/1.1) : Math.round(ship*0.1);
-      if(state.priceMode==='incl') ship = Math.round(ship/1.1);
-    }
+    if(ship){ if(state.ship.taxable) taxable+=ship; else free+=ship; }
   }
-  const totalSupply = supply + ship;
-  const totalVat = vat + shipVat;
-  return { supply, taxable, free, ship, shipVat, vat, totalSupply, totalVat, total: totalSupply+totalVat };
+  return { supply, taxable, free, ship, total: supply+ship };
 }
 
 function recalc(){
@@ -717,7 +697,6 @@ function recalc(){
   $('t_taxable').textContent= won(t.taxable);
   $('t_free').textContent   = won(t.free);
   $('t_ship').textContent   = won(t.ship);
-  $('t_vat').textContent    = won(t.totalVat);
   $('t_total').textContent  = won(t.total);
 
   if(!state.ship.manual){
@@ -755,11 +734,10 @@ function renderPaper(){
       <td class="c">${d.getMonth()+1}/${d.getDate()}</td>
       <td class="nm">${esc(it.name)}</td>
       <td class="c">${esc(it.spec)}</td>
-      <td class="c">${it.taxable?'과':'면'}</td>
+      <td class="c">${it.taxable?'과세':'면세'}</td>
       <td class="n">${it.qty?won(it.qty):''}</td>
       <td class="n">${it.price?won(it.price):''}</td>
       <td class="n">${won(lineSupply(it))}</td>
-      <td class="n">${lineVat(it)?won(lineVat(it)):'-'}</td>
       <td class="nm" style="font-size:9px">${esc(it.note||it.warehouse)}</td>
     </tr>`);
   });
@@ -768,16 +746,15 @@ function renderPaper(){
       <td class="c">${d.getMonth()+1}/${d.getDate()}</td>
       <td class="nm">택배비</td>
       <td class="c">${state.ship.manual?'':'합산'}</td>
-      <td class="c">${state.ship.taxable?'과':'면'}</td>
+      <td class="c">${state.ship.taxable?'과세':'면세'}</td>
       <td class="n">1</td>
       <td class="n">${won(t.ship)}</td>
       <td class="n">${won(t.ship)}</td>
-      <td class="n">${t.shipVat?won(t.shipVat):'-'}</td>
       <td class="nm" style="font-size:9px">${esc($('shipDesc').value||'')}</td>
     </tr>`);
   }
   const pad = Math.max(0, MIN_ROWS - rows.length);
-  for(let i=0;i<pad;i++) rows.push(`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`);
+  for(let i=0;i<pad;i++) rows.push(`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`);
 
   const balHtml = state.balance.show ? `
     <table class="pt pBal">
@@ -787,8 +764,8 @@ function renderPaper(){
       <tr><th>미수금 계</th><td><b>${won(state.balance.prev + t.total - state.balance.paid)}</b></td></tr>
     </table>` : `
     <table class="pt pBal">
-      <tr><th>공급가액</th><td>${won(t.totalSupply)}</td></tr>
-      <tr><th>부가세액</th><td>${won(t.totalVat)}</td></tr>
+      <tr><th>과세 품목</th><td>${won(t.taxable)}</td></tr>
+      <tr><th>면세 품목</th><td>${won(t.free)}</td></tr>
       <tr><th>합계금액</th><td><b>${won(t.total)}</b></td></tr>
     </table>`;
 
@@ -831,19 +808,18 @@ function renderPaper(){
 
   <table class="pt goods">
     <colgroup>
-      <col style="width:11mm"><col><col style="width:17mm"><col style="width:8mm">
-      <col style="width:12mm"><col style="width:19mm"><col style="width:23mm">
-      <col style="width:19mm"><col style="width:24mm">
+      <col style="width:12mm"><col><col style="width:18mm"><col style="width:11mm">
+      <col style="width:13mm"><col style="width:21mm"><col style="width:26mm">
+      <col style="width:28mm">
     </colgroup>
     <thead><tr>
-      <th>월/일</th><th>품 목</th><th>규격</th><th>세</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th><th>비고</th>
+      <th>월/일</th><th>품 목</th><th>규격</th><th>세</th><th>수량</th><th>단가</th><th>공급가</th><th>비고</th>
     </tr></thead>
     <tbody>${rows.join('')}</tbody>
     <tfoot><tr>
       <td colspan="6" style="text-align:center">합 &nbsp; 계</td>
-      <td class="n">${won(t.totalSupply)}</td>
-      <td class="n">${won(t.totalVat)}</td>
       <td class="n">${won(t.total)}</td>
+      <td></td>
     </tr></tfoot>
   </table>
 
@@ -885,7 +861,6 @@ $('shipManual').addEventListener('change',e=>{
 });
 $('shipAmount').addEventListener('input',e=>{ state.ship.amount=numOf(e.target.value); recalc(); });
 $('shipAmount').addEventListener('blur',e=>{ e.target.value=won(state.ship.amount); });
-$('priceMode').addEventListener('change',e=>{ state.priceMode=e.target.value; recalc(); });
 $('showBalance').addEventListener('change',e=>{
   state.balance.show=e.target.checked;
   $('balFields').style.display=e.target.checked?'grid':'none';
@@ -1027,16 +1002,16 @@ $('btnPasteLoad').addEventListener('click',()=>{
 });
 
 /* ---------- 임시저장 ----------
-   DRAFT_V 를 올리면, 그보다 오래된 임시저장본의 계산 설정(priceMode)은 무시하고
-   새 기본값을 씁니다. 정산 규칙이 바뀌었는데 예전 설정이 되살아나
-   금액이 잘못 찍히는 것을 막기 위한 장치입니다. (v2: 공급가 = 부가세 포함가) */
-const DRAFT_V = 2;
+   DRAFT_V 를 올리면 그보다 오래된 임시저장본의 정산 설정은 버리고 새 기본값을 씁니다.
+   정산 규칙이 바뀌었는데 예전 설정이 되살아나 금액이 잘못 찍히는 것을 막는 장치입니다.
+   (v3: 세액 계산 폐지 — 공급가 그대로, 과세/면세는 분류 표시만) */
+const DRAFT_V = 3;
 
 function saveDraft(){
   try{ localStorage.setItem(LS.draft, JSON.stringify({
     v:DRAFT_V,
     meta:state.meta, buyer:state.buyer, items:state.items,
-    ship:state.ship, priceMode:state.priceMode, balance:state.balance
+    ship:state.ship, balance:state.balance
   })); }catch(e){}
 }
 function loadDraft(){
@@ -1047,8 +1022,8 @@ function loadDraft(){
     Object.assign(state.buyer,d.buyer||{});
     Object.assign(state.ship,d.ship||{});
     Object.assign(state.balance,d.balance||{});
-    /* 오래된 임시저장본의 계산 설정은 신뢰하지 않는다 */
-    state.priceMode = (d.v===DRAFT_V && d.priceMode) ? d.priceMode : 'incl';
+    /* 오래된 임시저장본의 정산 설정은 신뢰하지 않는다 */
+    if(d.v!==DRAFT_V) state.ship.taxable = true;
     if(Array.isArray(d.items)&&d.items.length) state.items=d.items;
     return true;
   }catch(e){ return false; }
@@ -1096,7 +1071,6 @@ window.addEventListener('resize',applyZoom);
   $('shipManual').checked=state.ship.manual;
   $('shipTaxable').checked=state.ship.taxable;
   $('shipAmount').disabled=!state.ship.manual;
-  $('priceMode').value=state.priceMode;
   $('showBalance').checked=state.balance.show;
   $('balFields').style.display=state.balance.show?'grid':'none';
   $('balPrev').value=state.balance.prev||0; $('balPaid').value=state.balance.paid||0;
