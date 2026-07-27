@@ -76,6 +76,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--ink)}
 .grid{display:grid;gap:8px 10px}
 .g2{grid-template-columns:1fr 1fr}
 .g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:1fr 1fr 1fr 1fr}
 .f label{display:block;font-size:10.5px;font-weight:600;color:var(--muted);margin-bottom:3px;letter-spacing:.2px}
 .f input,.f select,.f textarea{
   width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:#fff;
@@ -199,7 +200,10 @@ table.goods tfoot td{font-weight:700;background:#eceff2;font-size:10.5px}
 .pBal th{width:22mm}
 .pBal td{text-align:right;font-variant-numeric:tabular-nums}
 .pSign{margin-top:5mm;text-align:right;font-size:10.5px}
-.pSign .line{display:inline-block;border-bottom:1px solid #000;width:34mm;margin:0 3px}
+.pSign .line{
+  display:inline-block;border-bottom:1px solid #000;width:34mm;margin:0 3px;
+  text-align:center;font-weight:700;line-height:1.15;
+}
 .pStamp{
   display:inline-block;border:1.4px solid #c0392b;color:#c0392b;border-radius:50%;
   width:15mm;height:15mm;line-height:1.05;text-align:center;font-size:8.5px;font-weight:700;
@@ -294,10 +298,11 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
     <div class="card">
       <h2>발행 정보</h2>
       <div class="body">
-        <div class="grid g3">
+        <div class="grid g4">
           <div class="f"><label>거래일자</label><input type="date" id="m_date"></div>
           <div class="f"><label>명세서 번호</label><input id="m_no" placeholder="자동"></div>
           <div class="f"><label>담당자</label><input id="m_staff" placeholder="예: 홍찬화"></div>
+          <div class="f"><label>인수자</label><input id="m_receiver" placeholder="비우면 서명란"></div>
         </div>
       </div>
     </div>
@@ -889,7 +894,7 @@ function renderPaper(){
 
   <div class="pSign">
     ${M.staff?'담당 '+esc(M.staff)+' &nbsp;&nbsp;':''}
-    인수자 <span class="line"></span> (인)
+    인수자 <span class="line">${esc(M.receiver)}</span> (인)
     <div style="margin-top:3mm"><span class="pStamp">${esc(S.company||'공급자')}<br>인</span></div>
   </div>`;
 }
@@ -904,7 +909,7 @@ function bind(id, obj, key, transform){
   el.addEventListener('change',set);
   return el;
 }
-['date','no','staff','note'].forEach(k=>bind('m_'+(k==='note'?'note':k), state.meta, k));
+['date','no','staff','receiver','note'].forEach(k=>bind('m_'+k, state.meta, k));
 /* 공급자·공급받는자 공통 항목 (양쪽 동일 양식) */
 const PARTY_KEYS = ['bizno','company','ceo','tel','addr'];
 PARTY_KEYS.concat('bank').forEach(k=>bind('s_'+k, state.supplier, k));
@@ -1367,7 +1372,8 @@ window.addEventListener('resize',applyZoom);
 
   /* 폼에 값 반영 */
   $('m_date').value=state.meta.date; $('m_no').value=state.meta.no;
-  $('m_staff').value=state.meta.staff||''; $('m_note').value=state.meta.note||'';
+  $('m_staff').value=state.meta.staff||''; $('m_receiver').value=state.meta.receiver||'';
+  $('m_note').value=state.meta.note||'';
   PARTY_KEYS.concat('bank').forEach(k=>$('s_'+k).value=state.supplier[k]||'');
   PARTY_KEYS.forEach(k=>$('b_'+k).value=state.buyer[k]||'');
   $('shipInclude').checked=state.ship.include;
