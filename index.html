@@ -209,6 +209,35 @@ table.goods tfoot td{font-weight:700;background:#eceff2;font-size:10.5px}
   padding-top:3.4mm;letter-spacing:-.5px;transform:rotate(-8deg);opacity:.85;
 }
 
+/* ---------- 사업자등록증 드롭존 ---------- */
+.dropzone{
+  border:1.5px dashed #b6c4d0;border-radius:7px;padding:9px 12px;margin-bottom:11px;
+  text-align:center;font-size:11.5px;color:var(--muted);cursor:pointer;background:#fafcfd;
+  transition:.12s;user-select:none;
+}
+.dropzone:hover{border-color:var(--accent);background:var(--accent-l);color:var(--accent-d)}
+.dropzone.over{border-color:var(--accent);border-style:solid;background:var(--accent-l);color:var(--accent-d)}
+.dropzone b{color:var(--ink);font-weight:700}
+.dropzone:hover b,.dropzone.over b{color:var(--accent-d)}
+
+/* ---------- 인식 결과 ---------- */
+.bzRow{display:grid;grid-template-columns:22px 96px 1fr;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line2)}
+.bzRow:last-child{border-bottom:none}
+.bzRow label{font-size:11px;font-weight:600;color:var(--muted)}
+.bzRow input[type=text]{width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:5px}
+.bzRow input[type=text]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-l)}
+.bzRow input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.bzRow.miss input[type=text]{background:#fdf6f5;border-color:#e8c4bf}
+.bzBar{height:5px;border-radius:99px;background:var(--line);overflow:hidden;margin:9px 0}
+.bzBar i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+.bzStep{font-size:12px;color:var(--muted);text-align:center}
+.bzRaw{margin-top:12px}
+.bzRaw summary{font-size:11.5px;color:var(--muted);cursor:pointer}
+.bzRaw pre{
+  margin:7px 0 0;padding:9px;background:#f7f9fb;border:1px solid var(--line);border-radius:6px;
+  font-size:11px;font-family:Consolas,monospace;max-height:180px;overflow:auto;white-space:pre-wrap;
+}
+
 /* ---------- modal ---------- */
 .mask{position:fixed;inset:0;background:rgba(12,22,30,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .mask.open{display:flex}
@@ -282,6 +311,10 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
         </span>
       </h2>
       <div class="body">
+        <div class="dropzone" id="dzSupplier">
+          <input type="file" accept="image/*,application/pdf" hidden>
+          <b>사업자등록증</b>을 끌어다 놓거나 클릭해서 선택 &nbsp;·&nbsp; PNG · JPG · PDF
+        </div>
         <div class="grid g2">
           <div class="f"><label>상호</label><input id="s_company" placeholder="○○수산 주식회사"></div>
           <div class="f"><label>사업자등록번호</label><input id="s_bizno" placeholder="000-00-00000"></div>
@@ -306,6 +339,10 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
         </span>
       </h2>
       <div class="body">
+        <div class="dropzone" id="dzBuyer">
+          <input type="file" accept="image/*,application/pdf" hidden>
+          <b>사업자등록증</b>을 끌어다 놓거나 클릭해서 선택 &nbsp;·&nbsp; PNG · JPG · PDF
+        </div>
         <div class="grid g2">
           <div class="f"><label>상호</label><input id="b_company"></div>
           <div class="f"><label>사업자등록번호</label><input id="b_bizno" placeholder="000-00-00000"></div>
@@ -419,6 +456,35 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
     <div class="mf">
       <button class="btn ghost" id="rmCancel">닫기</button>
       <button class="btn" id="btnPasteLoad">붙여넣은 내용 불러오기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 사업자등록증 인식 모달 ============ -->
+<div class="mask" id="bizMask">
+  <div class="modal">
+    <h3 id="bzTitle">사업자등록증 인식 <button id="bzClose">×</button></h3>
+    <div class="mb">
+      <div id="bzProgress">
+        <div class="bzStep" id="bzStep">파일을 읽는 중…</div>
+        <div class="bzBar"><i id="bzBarFill"></i></div>
+        <div class="hint" style="text-align:center">
+          사진은 처음 한 번만 인식 엔진(약 12MB)을 내려받습니다. 이후에는 빨라집니다.
+        </div>
+      </div>
+      <div id="bzResult" style="display:none">
+        <div class="hint" id="bzSummary" style="margin-bottom:9px"></div>
+        <div id="bzFields"></div>
+        <details class="bzRaw"><summary>인식된 원문 보기</summary><pre id="bzRaw"></pre></details>
+      </div>
+      <div id="bzError" style="display:none;padding:6px 0">
+        <div style="font-size:12.5px;color:var(--danger);font-weight:600" id="bzErrMsg"></div>
+        <div class="hint" style="margin-top:6px">정보를 직접 입력하셔도 됩니다.</div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn ghost" id="bzCancel">닫기</button>
+      <button class="btn" id="bzApply" style="display:none">선택 항목 채우기</button>
     </div>
   </div>
 </div>
@@ -1001,6 +1067,240 @@ $('btnPasteLoad').addEventListener('click',()=>{
   toast(`상품 ${items.length.toLocaleString()}개를 불러왔습니다`);
 });
 
+/* =========================================================
+   사업자등록증 인식 (드래그 앤 드롭)
+   - PDF 에 글자 정보가 있으면(홈택스 발급본) 그대로 읽어 정확합니다.
+   - 사진·스캔본은 OCR 을 돌립니다. 인식이 완벽하지 않으므로
+     반드시 사용자가 확인한 뒤 적용하도록 합니다.
+   ========================================================= */
+const BIZ_FIELDS = [
+  { k:'bizno',   label:'등록번호' },
+  { k:'company', label:'상호' },
+  { k:'ceo',     label:'대표자' },
+  { k:'addr',    label:'사업장 주소' },
+  { k:'biztype', label:'업태' },
+  { k:'bizitem', label:'종목' },
+];
+
+let bzTarget='supplier', bzParsed={}, bzRawText='';
+
+/* 워커(Worker)는 자기 컨텍스트 기준으로 경로를 풀기 때문에
+   상대경로를 넘기면 깨진다. 항상 절대 URL 로 만들어 전달한다. */
+const VENDOR = new URL('vendor/', location.href).href;
+const vendorUrl = f => VENDOR + f;
+
+function loadScriptOnce(src){
+  return new Promise((res,rej)=>{
+    if(document.querySelector(`script[data-vend="${src}"]`)) return res();
+    const s=document.createElement('script');
+    s.src=src; s.dataset.vend=src;
+    s.onload=()=>res();
+    s.onerror=()=>rej(new Error('인식 엔진을 불러오지 못했습니다. 이 기능은 웹 주소로 접속했을 때만 동작합니다.'));
+    document.head.appendChild(s);
+  });
+}
+
+/* 라벨의 글자 사이에 공백이 끼어도("상 호") 잡히도록 정규식을 만든다 */
+function labelRe(lab){
+  return new RegExp(lab.split('').map(c=>c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('\\s*'));
+}
+
+function fieldFrom(lines, labels, stops){
+  for(let i=0;i<lines.length;i++){
+    for(const lab of labels){
+      const m = lines[i].match(labelRe(lab));
+      if(!m) continue;
+      let v = lines[i].slice(m.index + m[0].length);
+      /* OCR 이 콜론을 ; . , 등으로 잘못 읽는 경우가 잦아 넉넉히 걷어낸다 */
+      v = v.replace(/^[\s()\[\]{}·:：;,.\-–—_|=~*'"]+/,'');
+      for(const s of stops){
+        const sm = v.match(labelRe(s));
+        if(sm && sm.index>0) v = v.slice(0, sm.index);
+      }
+      v = v.replace(/[\s:：;,._|=~-]+$/,'').trim();
+      if(v.length>=2) return v;
+      /* 값이 다음 줄로 밀린 경우 */
+      const nx = (lines[i+1]||'').trim();
+      if(nx.length>=2 && !/^[가-힣]{1,5}\s*[:：]/.test(nx)) return nx;
+    }
+  }
+  return '';
+}
+
+function parseBizDoc(raw){
+  const lines = raw.split('\n').map(s=>s.replace(/[ \t]+/g,' ').trim()).filter(Boolean);
+  const text  = lines.join('\n');
+  const out   = {};
+
+  const m = text.match(/(\d{3})\s*[-‐‑–—ー]\s*(\d{2})\s*[-‐‑–—ー]\s*(\d{5})/);
+  if(m) out.bizno = `${m[1]}-${m[2]}-${m[3]}`;
+
+  out.company = fieldFrom(lines, ['법인명(단체명)','법인명','상호(단체명)','상호','단체명'],
+                                 ['대표자','성명','등록번호','법인등록번호']);
+  out.ceo     = fieldFrom(lines, ['대표자','성명'],
+                                 ['생년월일','주민등록번호','법인등록번호','개업연월일','등록번호']);
+  out.addr    = fieldFrom(lines, ['사업장소재지','사업장주소','본점소재지','소재지'],
+                                 ['업태','종목','전화','발급']);
+  out.biztype = fieldFrom(lines, ['업태'], ['종목']);
+  out.bizitem = fieldFrom(lines, ['종목'], ['업태','발급','교부']);
+  return out;
+}
+
+/* ---------- PDF ---------- */
+async function pdfExtract(file, step){
+  step('PDF 를 여는 중…', 15);
+  await loadScriptOnce(vendorUrl('pdf.min.js'));
+  pdfjsLib.GlobalWorkerOptions.workerSrc = vendorUrl('pdf.worker.min.js');
+  const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+
+  let text='';
+  for(let p=1; p<=Math.min(pdf.numPages,3); p++){
+    const page = await pdf.getPage(p);
+    const tc   = await page.getTextContent();
+    const rows = {};
+    tc.items.forEach(it=>{
+      const y = Math.round(it.transform[5]);
+      (rows[y] = rows[y] || []).push({x: it.transform[4], s: it.str});
+    });
+    Object.keys(rows).sort((a,b)=>b-a).forEach(y=>{
+      text += rows[y].sort((a,b)=>a.x-b.x).map(o=>o.s).join(' ').replace(/\s+/g,' ').trim() + '\n';
+    });
+  }
+
+  /* 글자 정보가 거의 없으면 스캔본 → 이미지로 만들어 OCR */
+  if(text.replace(/\s/g,'').length >= 40) return {text, mode:'pdf-text'};
+
+  step('스캔본입니다. 이미지로 변환 중…', 25);
+  const page = await pdf.getPage(1);
+  const vp   = page.getViewport({scale: 2.5});
+  const cv   = document.createElement('canvas');
+  cv.width = vp.width; cv.height = vp.height;
+  await page.render({canvasContext: cv.getContext('2d'), viewport: vp}).promise;
+  return {text: await runOcr(cv, step), mode:'pdf-ocr'};
+}
+
+/* ---------- OCR ---------- */
+async function runOcr(source, step){
+  step('인식 엔진 준비 중…', 30);
+  await loadScriptOnce(vendorUrl('tesseract.min.js'));
+  const worker = await Tesseract.createWorker('kor+eng', 1, {
+    workerPath : vendorUrl('tesseract.worker.min.js'),
+    corePath   : VENDOR,
+    langPath   : VENDOR,
+    logger: m=>{
+      if(m.status==='recognizing text') step('글자를 읽는 중…', 55 + Math.round(m.progress*40));
+      else if(/loading|initializ/i.test(m.status)) step('인식 엔진 준비 중…', 35);
+    }
+  });
+  try{
+    const { data } = await worker.recognize(source);
+    return data.text;
+  } finally { await worker.terminate(); }
+}
+
+/* ---------- 진행 표시 ---------- */
+function bzStep(msg, pct){
+  $('bzStep').textContent = msg;
+  $('bzBarFill').style.width = (pct||0) + '%';
+}
+
+async function handleBizFile(file, target){
+  bzTarget = target;
+  $('bizMask').classList.add('open');
+  $('bzTitle').firstChild.nodeValue =
+    (target==='supplier' ? '공급자' : '공급받는자') + ' 사업자등록증 인식 ';
+  $('bzProgress').style.display='block';
+  $('bzResult').style.display='none';
+  $('bzError').style.display='none';
+  $('bzApply').style.display='none';
+  bzStep('파일을 읽는 중…', 8);
+
+  try{
+    const isPdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name);
+    const r = isPdf ? await pdfExtract(file, bzStep)
+                    : { text: await runOcr(file, bzStep), mode:'image-ocr' };
+
+    bzRawText = r.text || '';
+    bzParsed  = parseBizDoc(bzRawText);
+    bzStep('완료', 100);
+    renderBizResult(r.mode);
+  }catch(err){
+    $('bzProgress').style.display='none';
+    $('bzError').style.display='block';
+    $('bzErrMsg').textContent = err.message || String(err);
+  }
+}
+
+function renderBizResult(mode){
+  $('bzProgress').style.display='none';
+  $('bzResult').style.display='block';
+  $('bzApply').style.display='inline-block';
+
+  const found = BIZ_FIELDS.filter(f=>bzParsed[f.k]).length;
+  $('bzSummary').innerHTML = mode==='pdf-text'
+    ? `PDF 안의 글자 정보를 그대로 읽었습니다. <b>${found}/${BIZ_FIELDS.length}개 항목</b> 인식 — 정확도가 높습니다.`
+    : `사진을 OCR 로 읽었습니다. <b>${found}/${BIZ_FIELDS.length}개 항목</b> 인식 — <b style="color:var(--warn)">틀린 글자가 있을 수 있으니 확인 후 채워 주세요.</b>`;
+
+  $('bzFields').innerHTML = BIZ_FIELDS.map(f=>{
+    const v = bzParsed[f.k] || '';
+    return `<div class="bzRow${v?'':' miss'}">
+      <input type="checkbox" data-k="${f.k}" ${v?'checked':''}>
+      <label>${f.label}</label>
+      <input type="text" data-v="${f.k}" value="${esc(v)}" placeholder="인식 안 됨 — 직접 입력">
+    </div>`;
+  }).join('');
+
+  $('bzRaw').textContent = bzRawText.trim() || '(원문 없음)';
+}
+
+$('bzApply').addEventListener('click',()=>{
+  const prefix = bzTarget==='supplier' ? 's_' : 'b_';
+  const obj    = bzTarget==='supplier' ? state.supplier : state.buyer;
+  let n=0;
+  $('bzFields').querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    if(!cb.checked) return;
+    const k  = cb.dataset.k;
+    const el = $('bzFields').querySelector(`input[data-v="${k}"]`);
+    const v  = (el.value||'').trim();
+    if(!v) return;
+    obj[k] = v;
+    const tgt = $(prefix+k);
+    if(tgt) tgt.value = v;
+    n++;
+  });
+  $('bizMask').classList.remove('open');
+  recalc();
+  toast(n ? `${n}개 항목을 채웠습니다` : '선택된 항목이 없습니다');
+});
+
+function closeBiz(){ $('bizMask').classList.remove('open'); }
+$('bzClose').addEventListener('click',closeBiz);
+$('bzCancel').addEventListener('click',closeBiz);
+$('bizMask').addEventListener('click',e=>{ if(e.target===$('bizMask')) closeBiz(); });
+
+/* ---------- 드롭존 연결 ---------- */
+function setupDropzone(el, target){
+  const input = el.querySelector('input[type=file]');
+  el.addEventListener('click',()=>input.click());
+  input.addEventListener('change',()=>{
+    if(input.files[0]) handleBizFile(input.files[0], target);
+    input.value='';
+  });
+  ['dragenter','dragover'].forEach(ev=>el.addEventListener(ev,e=>{
+    e.preventDefault(); e.stopPropagation(); el.classList.add('over');
+  }));
+  ['dragleave','dragend'].forEach(ev=>el.addEventListener(ev,e=>{
+    e.preventDefault(); el.classList.remove('over');
+  }));
+  el.addEventListener('drop',e=>{
+    e.preventDefault(); e.stopPropagation(); el.classList.remove('over');
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) handleBizFile(f, target);
+  });
+}
+/* 드롭존 밖에 떨어뜨렸을 때 브라우저가 파일을 열어버리는 것 방지 */
+['dragover','drop'].forEach(ev=>window.addEventListener(ev,e=>e.preventDefault()));
+
 /* ---------- 임시저장 ----------
    DRAFT_V 를 올리면 그보다 오래된 임시저장본의 정산 설정은 버리고 새 기본값을 씁니다.
    정산 규칙이 바뀌었는데 예전 설정이 되살아나 금액이 잘못 찍히는 것을 막는 장치입니다.
@@ -1077,6 +1377,9 @@ window.addEventListener('resize',applyZoom);
 
   /* 브라우저 자동완성이 명세서 값을 덮어쓰지 않도록 차단 */
   document.querySelectorAll('input,textarea').forEach(el=>el.setAttribute('autocomplete','off'));
+
+  setupDropzone($('dzSupplier'), 'supplier');
+  setupDropzone($('dzBuyer'),    'buyer');
 
   paintBuyers();
   renderRows();
