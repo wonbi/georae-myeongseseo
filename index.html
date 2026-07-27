@@ -228,6 +228,7 @@ table.goods tfoot td{font-weight:700;background:#eceff2;font-size:10.5px}
 .bzRow input[type=text]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-l)}
 .bzRow input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
 .bzRow.miss input[type=text]{background:#fdf6f5;border-color:#e8c4bf}
+.bzRow.guess input[type=text]{background:#fffaf1;border-color:#e8b465}
 .bzBar{height:5px;border-radius:99px;background:var(--line);overflow:hidden;margin:9px 0}
 .bzBar i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
 .bzStep{font-size:12px;color:var(--muted);text-align:center}
@@ -1082,7 +1083,7 @@ const BIZ_FIELDS = [
   { k:'bizitem', label:'종목' },
 ];
 
-let bzTarget='supplier', bzParsed={}, bzRawText='';
+let bzTarget='supplier', bzParsed={}, bzRawText='', bzGuessed=[];
 
 /* 워커(Worker)는 자기 컨텍스트 기준으로 경로를 풀기 때문에
    상대경로를 넘기면 깨진다. 항상 절대 URL 로 만들어 전달한다. */
@@ -1143,7 +1144,29 @@ function parseBizDoc(raw){
                                  ['업태','종목','전화','발급']);
   out.biztype = fieldFrom(lines, ['업태'], ['종목']);
   out.bizitem = fieldFrom(lines, ['종목'], ['업태','발급','교부']);
-  return out;
+
+  /* 사업자등록증에서 업태와 종목은 항상 붙어 있다.
+     OCR 이 '종 목' 을 못 읽었을 때(예: 'SS')만 바로 다음 줄을 종목으로 추정한다.
+     추정값은 확실하지 않으므로 guessed 로 표시해 체크 해제 상태로 보여준다. */
+  const guessed = [];
+  if(out.biztype && !out.bizitem){
+    const i = lines.findIndex(l => labelRe('업태').test(l));
+    if(i >= 0 && lines[i+1]){
+      const m = lines[i+1].match(/^([^:：]{0,8})[:：]\s*(.+)$/);
+      const lab = m && m[1];
+      const v   = m && m[2].trim();
+      const 다른항목 = /발급|교부|일자|연월일|사유|주소|소재지|번호|성명|대표|상호|법인/;
+      const 날짜꼴  = /^\s*\d{4}\s*[년.\-/]/;
+      if(v && v.length>=2
+         && !다른항목.test(lab) && !날짜꼴.test(v)
+         && !/\d{3}\s*-\s*\d{2}/.test(v)
+         && !labelRe('업태').test(lines[i+1])){
+        out.bizitem = v;
+        guessed.push('bizitem');
+      }
+    }
+  }
+  return { v: out, guessed };
 }
 
 /* ---------- PDF ---------- */
@@ -1221,7 +1244,9 @@ async function handleBizFile(file, target){
                     : { text: await runOcr(file, bzStep), mode:'image-ocr' };
 
     bzRawText = r.text || '';
-    bzParsed  = parseBizDoc(bzRawText);
+    const p   = parseBizDoc(bzRawText);
+    bzParsed  = p.v;
+    bzGuessed = p.guessed;
     bzStep('완료', 100);
     renderBizResult(r.mode);
   }catch(err){
@@ -1243,9 +1268,10 @@ function renderBizResult(mode){
 
   $('bzFields').innerHTML = BIZ_FIELDS.map(f=>{
     const v = bzParsed[f.k] || '';
-    return `<div class="bzRow${v?'':' miss'}">
-      <input type="checkbox" data-k="${f.k}" ${v?'checked':''}>
-      <label>${f.label}</label>
+    const guess = bzGuessed.includes(f.k);
+    return `<div class="bzRow${v?(guess?' guess':''):' miss'}">
+      <input type="checkbox" data-k="${f.k}" ${v && !guess ?'checked':''}>
+      <label>${f.label}${guess?' <span style="color:var(--warn)">추정</span>':''}</label>
       <input type="text" data-v="${f.k}" value="${esc(v)}" placeholder="인식 안 됨 — 직접 입력">
     </div>`;
   }).join('');
