@@ -353,8 +353,8 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
           <div class="f"><label>택배비 산정</label><input id="shipDesc" disabled placeholder="품목별 합산"></div>
           <div class="f"><label>단가 기준</label>
             <select id="priceMode">
-              <option value="excl">부가세 별도 (단가 = 공급가액)</option>
-              <option value="incl">부가세 포함 (단가에서 역산)</option>
+              <option value="incl">부가세 포함가 (단가 안에 세액이 들어있음)</option>
+              <option value="excl">부가세 별도 (단가에 세액을 더함)</option>
             </select>
           </div>
         </div>
@@ -542,7 +542,8 @@ const state = {
   supplier:{}, buyer:{},
   items:[],
   ship:{ include:true, manual:false, taxable:true, amount:0 },
-  priceMode:'excl',
+  /* 시트의 공급가는 과세 상품도 부가세가 포함된 최종가라, 세액을 더하지 않고 역산한다 */
+  priceMode:'incl',
   balance:{ show:false, prev:0, paid:0 }
 };
 
@@ -1040,7 +1041,7 @@ function loadDraft(){
     Object.assign(state.buyer,d.buyer||{});
     Object.assign(state.ship,d.ship||{});
     Object.assign(state.balance,d.balance||{});
-    state.priceMode=d.priceMode||'excl';
+    state.priceMode=d.priceMode||'incl';
     if(Array.isArray(d.items)&&d.items.length) state.items=d.items;
     return true;
   }catch(e){ return false; }
