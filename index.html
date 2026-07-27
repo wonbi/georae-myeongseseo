@@ -204,11 +204,6 @@ table.goods tfoot td{font-weight:700;background:#eceff2;font-size:10.5px}
   display:inline-block;border-bottom:1px solid #000;width:34mm;margin:0 3px;
   text-align:center;font-weight:700;line-height:1.15;
 }
-.pStamp{
-  display:inline-block;border:1.4px solid #c0392b;color:#c0392b;border-radius:50%;
-  width:15mm;height:15mm;line-height:1.05;text-align:center;font-size:8.5px;font-weight:700;
-  padding-top:3.4mm;letter-spacing:-.5px;transform:rotate(-8deg);opacity:.85;
-}
 
 /* ---------- 사업자등록증 드롭존 ---------- */
 .dropzone{
@@ -895,7 +890,6 @@ function renderPaper(){
   <div class="pSign">
     ${M.staff?'담당 '+esc(M.staff)+' &nbsp;&nbsp;':''}
     인수자 <span class="line">${esc(M.receiver)}</span> (인)
-    <div style="margin-top:3mm"><span class="pStamp">${esc(S.company||'공급자')}<br>인</span></div>
   </div>`;
 }
 
