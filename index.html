@@ -168,19 +168,16 @@ table.pt th,table.pt td{border:1px solid #000;padding:2.6px 4px;vertical-align:m
 table.pt th{background:#eceff2;font-weight:700;text-align:center;font-size:10px}
 
 /* 거래처 / 공급자 blocks */
-.parties{display:grid;grid-template-columns:1fr 1.32fr;gap:4mm;margin-bottom:5px}
-.pBuyer{display:flex;flex-direction:column;justify-content:flex-end}
-.pBuyerName{
-  border:1px solid #000;padding:7px 8px;font-size:14px;font-weight:700;
-  display:flex;align-items:center;gap:8px;min-height:38px;
-}
-.pBuyerName .gwi{font-size:11px;font-weight:400;margin-left:auto}
-.pBuyerSub{border:1px solid #000;border-top:none;padding:4px 8px;font-size:10px;color:#333;min-height:22px}
-.pSupTbl th{background:#eceff2;font-size:9.5px}
-.pSupTbl td{font-size:10px}
-.pSupTbl .lbl{
-  background:#dde3e8;font-weight:700;text-align:center;font-size:10px;
-  line-height:1.5;letter-spacing:0;
+.pGwi{font-size:14px;font-weight:700;margin:0 0 4px;padding-bottom:2px}
+.pGwi span{font-size:10.5px;font-weight:400;margin-left:4px}
+.parties{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin-bottom:5px}
+.pParty th{background:#eceff2;font-size:9.5px;text-align:center}
+.pParty td{font-size:10px;height:15px}
+.pParty td.bz{font-weight:700;letter-spacing:.3px}
+.pParty td.ad{font-size:9.5px}
+.pParty .lbl{
+  background:#dde3e8;font-weight:700;text-align:center;font-size:9.5px;
+  line-height:1.35;letter-spacing:0;
 }
 
 .pSum{border:1.6px solid #000;padding:5px 8px;margin-bottom:5px;display:flex;align-items:center;gap:10px;background:#f7f8f9}
@@ -317,14 +314,12 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
           <b>사업자등록증</b>을 끌어다 놓거나 클릭해서 선택 &nbsp;·&nbsp; PNG · JPG · PDF
         </div>
         <div class="grid g2">
+          <div class="f"><label>등록번호</label><input id="s_bizno" placeholder="000-00-00000"></div>
           <div class="f"><label>상호</label><input id="s_company" placeholder="○○수산 주식회사"></div>
-          <div class="f"><label>사업자등록번호</label><input id="s_bizno" placeholder="000-00-00000"></div>
-          <div class="f"><label>대표자</label><input id="s_ceo"></div>
-          <div class="f"><label>전화 / 팩스</label><input id="s_tel" placeholder="031-000-0000"></div>
-          <div class="f" style="grid-column:1/-1"><label>사업장 주소</label><input id="s_addr"></div>
-          <div class="f"><label>업태</label><input id="s_biztype" placeholder="도소매"></div>
-          <div class="f"><label>종목</label><input id="s_bizitem" placeholder="수산물"></div>
-          <div class="f" style="grid-column:1/-1"><label>입금 계좌 (선택)</label><input id="s_bank" placeholder="○○은행 000-00-000000 예금주 ○○수산"></div>
+          <div class="f"><label>성명</label><input id="s_ceo" placeholder="대표자명"></div>
+          <div class="f"><label>전화 <span style="font-weight:400">(선택)</span></label><input id="s_tel" placeholder="031-000-0000"></div>
+          <div class="f" style="grid-column:1/-1"><label>주소</label><input id="s_addr"></div>
+          <div class="f" style="grid-column:1/-1"><label>입금 계좌 <span style="font-weight:400">(선택)</span></label><input id="s_bank" placeholder="○○은행 000-00-000000 예금주 ○○수산"></div>
         </div>
       </div>
     </div>
@@ -345,13 +340,11 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
           <b>사업자등록증</b>을 끌어다 놓거나 클릭해서 선택 &nbsp;·&nbsp; PNG · JPG · PDF
         </div>
         <div class="grid g2">
+          <div class="f"><label>등록번호</label><input id="b_bizno" placeholder="000-00-00000"></div>
           <div class="f"><label>상호</label><input id="b_company"></div>
-          <div class="f"><label>사업자등록번호</label><input id="b_bizno" placeholder="000-00-00000"></div>
-          <div class="f"><label>대표자</label><input id="b_ceo"></div>
-          <div class="f"><label>연락처</label><input id="b_tel"></div>
+          <div class="f"><label>성명</label><input id="b_ceo" placeholder="대표자명"></div>
+          <div class="f"><label>전화 <span style="font-weight:400">(선택)</span></label><input id="b_tel"></div>
           <div class="f" style="grid-column:1/-1"><label>주소</label><input id="b_addr"></div>
-          <div class="f"><label>업태</label><input id="b_biztype"></div>
-          <div class="f"><label>종목</label><input id="b_bizitem"></div>
         </div>
       </div>
     </div>
@@ -788,6 +781,20 @@ function recalc(){
 const esc = s => String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const MIN_ROWS = 12;
 
+/* 공급자·공급받는자를 같은 양식(등록번호·상호·성명·주소)으로 나란히 그린다 */
+function partyTable(title, p){
+  return `<table class="pt pParty">
+    <colgroup><col style="width:7mm"><col style="width:16mm"><col></colgroup>
+    <tr>
+      <td class="lbl" rowspan="4">${title.split('').join('<br>')}</td>
+      <th>등록번호</th><td class="bz">${esc(p.bizno)}</td>
+    </tr>
+    <tr><th>상 호</th><td>${esc(p.company)}</td></tr>
+    <tr><th>성 명</th><td>${esc(p.ceo)}${p.tel?' <span style="color:#555">('+esc(p.tel)+')</span>':''}</td></tr>
+    <tr><th>주 소</th><td class="ad">${esc(p.addr)}</td></tr>
+  </table>`;
+}
+
 function renderPaper(){
   const t=totals();
   const S=state.supplier, B=state.buyer, M=state.meta;
@@ -843,28 +850,11 @@ function renderPaper(){
     <div>${dateStr}</div>
   </div>
 
+  <div class="pGwi">${esc(B.company)||'<span style="color:#aaa">거래처명</span>'} <span>귀하</span></div>
+
   <div class="parties">
-    <div class="pBuyer">
-      <div class="pBuyerName">${esc(B.company)||'<span style="color:#aaa">거래처명</span>'}<span class="gwi">귀하</span></div>
-      <div class="pBuyerSub">
-        ${B.bizno?'등록번호 '+esc(B.bizno):''}${B.ceo?' &nbsp;·&nbsp; 대표 '+esc(B.ceo):''}${B.tel?' &nbsp;·&nbsp; '+esc(B.tel):''}
-        ${B.addr?'<br>'+esc(B.addr):''}
-      </div>
-    </div>
-    <table class="pt pSupTbl">
-      <colgroup>
-        <col style="width:7mm"><col style="width:16mm"><col>
-        <col style="width:13mm"><col style="width:22mm">
-      </colgroup>
-      <tr>
-        <td class="lbl" rowspan="5">공<br>급<br>자</td>
-        <th>등록번호</th><td colspan="3">${esc(S.bizno)}</td>
-      </tr>
-      <tr><th>상호</th><td>${esc(S.company)}</td><th>대표자</th><td>${esc(S.ceo)}</td></tr>
-      <tr><th>사업장</th><td colspan="3">${esc(S.addr)}</td></tr>
-      <tr><th>업태</th><td>${esc(S.biztype)}</td><th>종목</th><td>${esc(S.bizitem)}</td></tr>
-      <tr><th>전화</th><td colspan="3">${esc(S.tel)}</td></tr>
-    </table>
+    ${partyTable('공급받는자', B)}
+    ${partyTable('공급자', S)}
   </div>
 
   <div class="pSum">
@@ -915,8 +905,10 @@ function bind(id, obj, key, transform){
   return el;
 }
 ['date','no','staff','note'].forEach(k=>bind('m_'+(k==='note'?'note':k), state.meta, k));
-['company','bizno','ceo','tel','addr','biztype','bizitem','bank'].forEach(k=>bind('s_'+k, state.supplier, k));
-['company','bizno','ceo','tel','addr','biztype','bizitem'].forEach(k=>bind('b_'+k, state.buyer, k));
+/* 공급자·공급받는자 공통 항목 (양쪽 동일 양식) */
+const PARTY_KEYS = ['bizno','company','ceo','tel','addr'];
+PARTY_KEYS.concat('bank').forEach(k=>bind('s_'+k, state.supplier, k));
+PARTY_KEYS.forEach(k=>bind('b_'+k, state.buyer, k));
 
 $('shipInclude').addEventListener('change',e=>{ state.ship.include=e.target.checked; recalc(); });
 $('shipTaxable').addEventListener('change',e=>{ state.ship.taxable=e.target.checked; recalc(); });
@@ -980,7 +972,7 @@ $('buyerDel').addEventListener('click',()=>{
 $('buyerPick').addEventListener('change',e=>{
   const b=buyers()[e.target.value]; if(!b) return;
   Object.assign(state.buyer,b);
-  ['company','bizno','ceo','tel','addr','biztype','bizitem'].forEach(k=>$('b_'+k).value=b[k]||'');
+  PARTY_KEYS.forEach(k=>$('b_'+k).value=b[k]||'');
   recalc();
 });
 
@@ -1077,10 +1069,8 @@ $('btnPasteLoad').addEventListener('click',()=>{
 const BIZ_FIELDS = [
   { k:'bizno',   label:'등록번호' },
   { k:'company', label:'상호' },
-  { k:'ceo',     label:'대표자' },
-  { k:'addr',    label:'사업장 주소' },
-  { k:'biztype', label:'업태' },
-  { k:'bizitem', label:'종목' },
+  { k:'ceo',     label:'성명' },
+  { k:'addr',    label:'주소' },
 ];
 
 let bzTarget='supplier', bzParsed={}, bzRawText='', bzGuessed=[];
@@ -1142,28 +1132,15 @@ function parseBizDoc(raw){
                                  ['생년월일','주민등록번호','법인등록번호','개업연월일','등록번호']);
   out.addr    = fieldFrom(lines, ['사업장소재지','사업장주소','본점소재지','소재지'],
                                  ['업태','종목','전화','발급']);
-  out.biztype = fieldFrom(lines, ['업태'], ['종목']);
-  out.bizitem = fieldFrom(lines, ['종목'], ['업태','발급','교부']);
-
-  /* 사업자등록증에서 업태와 종목은 항상 붙어 있다.
-     OCR 이 '종 목' 을 못 읽었을 때(예: 'SS')만 바로 다음 줄을 종목으로 추정한다.
-     추정값은 확실하지 않으므로 guessed 로 표시해 체크 해제 상태로 보여준다. */
+  /* 주소는 여러 줄로 잘리는 경우가 있어, 다음 줄이 이어지는 주소면 붙인다 */
   const guessed = [];
-  if(out.biztype && !out.bizitem){
-    const i = lines.findIndex(l => labelRe('업태').test(l));
-    if(i >= 0 && lines[i+1]){
-      const m = lines[i+1].match(/^([^:：]{0,8})[:：]\s*(.+)$/);
-      const lab = m && m[1];
-      const v   = m && m[2].trim();
-      const 다른항목 = /발급|교부|일자|연월일|사유|주소|소재지|번호|성명|대표|상호|법인/;
-      const 날짜꼴  = /^\s*\d{4}\s*[년.\-/]/;
-      if(v && v.length>=2
-         && !다른항목.test(lab) && !날짜꼴.test(v)
-         && !/\d{3}\s*-\s*\d{2}/.test(v)
-         && !labelRe('업태').test(lines[i+1])){
-        out.bizitem = v;
-        guessed.push('bizitem');
-      }
+  if(out.addr){
+    const i = lines.findIndex(l => labelRe('사업장소재지').test(l) || labelRe('사업장주소').test(l) || labelRe('소재지').test(l));
+    const nx = i>=0 ? (lines[i+1]||'').trim() : '';
+    if(nx && !/[:：]/.test(nx) && /^[(\d가-힣]/.test(nx) && nx.length<=40
+       && !/^\d{4}\s*[년.\-/]/.test(nx) && !labelRe('업태').test(nx)){
+      out.addr += ' ' + nx;
+      guessed.push('addr');
     }
   }
   return { v: out, guessed };
@@ -1391,8 +1368,8 @@ window.addEventListener('resize',applyZoom);
   /* 폼에 값 반영 */
   $('m_date').value=state.meta.date; $('m_no').value=state.meta.no;
   $('m_staff').value=state.meta.staff||''; $('m_note').value=state.meta.note||'';
-  ['company','bizno','ceo','tel','addr','biztype','bizitem','bank'].forEach(k=>$('s_'+k).value=state.supplier[k]||'');
-  ['company','bizno','ceo','tel','addr','biztype','bizitem'].forEach(k=>$('b_'+k).value=state.buyer[k]||'');
+  PARTY_KEYS.concat('bank').forEach(k=>$('s_'+k).value=state.supplier[k]||'');
+  PARTY_KEYS.forEach(k=>$('b_'+k).value=state.buyer[k]||'');
   $('shipInclude').checked=state.ship.include;
   $('shipManual').checked=state.ship.manual;
   $('shipTaxable').checked=state.ship.taxable;
