@@ -1363,7 +1363,7 @@ window.addEventListener('resize',applyZoom);
   /* 빌드할 때 build.py 가 아래 토큰을 실제 버전으로 바꿔 넣는다.
      바뀌지 않았다면 빌드를 거치지 않은 개발본이라는 뜻이다. */
   (function(){
-    const v = 'v1.2', t = '2026-07-28 00:09';
+    const v = 'v1.3', t = '2026-07-28 00:12';
     const dev = v.indexOf('__') === 0;
     $('verChip').textContent = dev ? '개발본' : v;
     $('verChip').title = dev ? '빌드를 거치지 않은 로컬 파일입니다'
