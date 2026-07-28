@@ -1,19 +1,72 @@
-# 거래명세서 자동 작성 (시안)
+# 거래명세서 자동 작성
 
 수산물 유통 발주·출고 정산용 거래명세서를 **입력만 하면 미리보기 + PDF 출력**까지 되는 웹앱입니다.
 
-## 실행
+**쓰는 주소 → https://wonbi.github.io/georae-myeongseseo/**
 
-`index.html` 을 더블클릭하면 끝입니다. (설치·서버 불필요, 인터넷 없어도 작동)
+---
 
-## 파일
+## 집·회사 어디서든 이어서 개발하기
 
-| 파일 | 설명 |
-|---|---|
-| `index.html` | 웹앱 본체 |
-| `products.js` | 구글시트에서 추출한 상품 DB (633개, 2026-07-27 기준) |
-| `products.json` | 같은 데이터의 JSON 원본 (다른 곳에서 쓸 때용) |
-| `apps-script.gs` | 구글시트 ↔ 웹앱 자동 연동 스크립트 |
+이 저장소 하나만 받으면 됩니다. 필요한 건 **git 과 Python** 뿐입니다.
+
+### 처음 한 번 (새 PC에서)
+
+```bash
+git clone https://github.com/wonbi/georae-myeongseseo.git
+cd georae-myeongseseo
+```
+
+### 작업할 때마다
+
+```bash
+git pull                 # 1. 다른 곳에서 한 작업 먼저 받기 (반드시 먼저!)
+                         # 2. index.html 수정
+python build.py          # 3. 빌드 (docs/ 갱신 + 버전 자동 증가)
+git add -A
+git commit -m "무엇을 바꿨는지"
+git push                 # 4. 올리기 -> 30초쯤 뒤 사이트 반영
+```
+
+**`git pull` 을 먼저 하는 게 제일 중요합니다.** 안 하면 다른 장소에서 한 작업과 충돌합니다.
+자리를 뜰 때는 반드시 `push` 까지 하고 일어나세요.
+
+### 폴더 구조
+
+```
+georae-myeongseseo/          <- 저장소 루트 (여기서 작업)
+├── index.html               소스. 이 파일을 고칩니다
+├── products.js              상품 DB (빌드 때 index.html 안으로 들어감)
+├── build.py                 빌드 스크립트
+├── parse_sheet.py           구글시트 덤프 -> products.js 변환
+├── apps-script.gs           구글시트 연동용 (시트에 붙여넣는 코드)
+├── version.json             빌드 번호 (자동 관리, 손대지 마세요)
+└── docs/                    빌드 결과. GitHub Pages 가 이 폴더를 서빙합니다
+    ├── index.html           단일 파일로 합쳐진 배포본 (직접 고치지 마세요)
+    └── vendor/              OCR·PDF 라이브러리 (12MB)
+```
+
+`docs/` 안은 `build.py` 가 만들어냅니다. **직접 고치면 다음 빌드에 덮어써집니다.**
+
+### 지금 보는 게 최신인지 확인
+
+화면 좌측 상단 제목 옆의 `v1.6` 같은 버전 칩을 보세요. 빌드할 때마다 올라갑니다.
+마우스를 올리면 빌드 시각도 나옵니다.
+
+---
+
+## 로컬에서 미리 보기
+
+빌드 결과를 브라우저로 확인하려면:
+
+```bash
+python -m http.server 8787 --directory docs
+```
+
+그다음 http://localhost:8787 을 엽니다.
+
+`docs/index.html` 을 그냥 더블클릭해도 대부분 동작하지만,
+**사업자등록증 인식 기능은 서버로 열어야 작동합니다.**
 
 ## 주요 기능
 
