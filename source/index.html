@@ -90,8 +90,8 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--ink)}
 /* ---------- item table ---------- */
 .itemHead,.itemRow{
   display:grid;
-  grid-template-columns: minmax(140px,1fr) 60px 44px 78px 58px 68px 86px 92px 22px;
-  gap:5px;align-items:center;min-width:626px;
+  grid-template-columns: minmax(140px,1fr) 60px 44px 78px 58px 68px 40px 86px 92px 22px;
+  gap:5px;align-items:center;min-width:671px;
 }
 .itemHead{
   padding:0 0 5px;font-size:10.5px;font-weight:700;color:var(--muted);letter-spacing:.2px;
@@ -364,13 +364,13 @@ code.k{background:#eef2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;fon
         <div class="itemHead">
           <span>상품명 <span style="color:var(--accent);font-weight:700">🔍 검색</span></span>
           <span>규격</span><span class="num">수량</span><span class="num">단가</span>
-          <span>면·과세</span><span class="num">택배비</span><span>비고</span>
+          <span>면·과세</span><span class="num">택배비</span><span class="num">건수</span><span>비고</span>
           <span class="num">공급가액</span><span></span>
         </div>
         <div id="itemRows"></div>
         <div class="rowAdd">
           <button class="minibtn" id="btnAddRow">＋ 품목 추가</button>
-          <span class="hint">상품명을 입력하면 구글시트 단가·택배비가 자동 입력됩니다. 값은 직접 수정할 수 있어요.</span>
+          <span class="hint">상품명을 입력하면 구글시트 단가·택배비가 자동 입력됩니다. 값은 직접 수정할 수 있어요. 택배가 2건 나가면 <b>건수</b>를 2로 올리면 택배비도 2배로 합산됩니다.</span>
         </div>
       </div>
     </div>
@@ -594,7 +594,7 @@ const state = {
 };
 
 function blankItem(){
-  return { name:'', spec:'', qty:1, price:0, taxable:false, fee:0, note:'',
+  return { name:'', spec:'', qty:1, price:0, taxable:false, fee:0, feeQty:1, note:'',
            warehouse:'', courier:'', auto:false, edited:false };
 }
 
@@ -648,7 +648,7 @@ function rowEl(it,idx){
     const p=results[k]; if(!p) return;
     /* 상품을 새로 고르면 그 행의 값은 전부 새 상품 기준으로 교체한다.
        (이전 상품의 규격·비고가 남아 잘못된 명세서가 나가는 것을 막기 위함) */
-    it.name=p.name; it.price=p.price; it.fee=p.fee||0; it.taxable=!!p.taxable;
+    it.name=p.name; it.price=p.price; it.fee=p.fee||0; it.feeQty=1; it.taxable=!!p.taxable;
     it.warehouse=p.warehouse||''; it.courier=p.courier||'';
     it.note=p.courier||'';
     it.spec=guessSpec(p.name);
@@ -707,6 +707,11 @@ function rowEl(it,idx){
   fee.addEventListener('blur',()=>{ fee.value = it.fee?won(it.fee):''; });
   fee.addEventListener('focus',()=>{ fee.value = it.fee||''; });
 
+  /* 택배 건수 - 한 품목에서 택배가 여러 건 나갈 때 택배비를 그 배수로 청구한다 */
+  const feeQty = mk(feeQtyOf(it), 'num','1', v=>{ it.feeQty=numOf(v); recalc(); });
+  feeQty.title='이 품목으로 나가는 택배 건수 (택배비 × 건수)';
+  feeQty.addEventListener('blur',()=>{ it.feeQty=feeQtyOf(it); feeQty.value=it.feeQty; recalc(); });
+
   const note= mk(it.note,'','택배사 등', v=>{ it.note=v; recalc(); });
 
   const amt=document.createElement('div'); amt.className='amt';
@@ -715,7 +720,7 @@ function rowEl(it,idx){
   const del=document.createElement('button'); del.className='del'; del.textContent='×'; del.title='행 삭제';
   del.addEventListener('click',()=>{ state.items.splice(idx,1); if(!state.items.length) state.items.push(blankItem()); renderRows(); recalc(); });
 
-  row.append(wrap,spec,qty,price,tax,fee,note,amt,del);
+  row.append(wrap,spec,qty,price,tax,fee,feeQty,note,amt,del);
   return row;
 }
 
@@ -726,8 +731,23 @@ function rowEl(it,idx){
 function lineSupply(it){
   return (it.qty||0)*(it.price||0);
 }
+/* 택배 건수는 비어 있거나 잘못된 값이면 1건으로 본다 (예전 임시저장본 호환) */
+function feeQtyOf(it){
+  const q = Math.floor(Number(it.feeQty));
+  return q > 0 ? q : 1;
+}
 function autoShip(){
-  return state.items.reduce((s,it)=> s + (it.name ? (it.fee||0) : 0), 0);
+  return state.items.reduce((s,it)=> s + (it.name ? (it.fee||0)*feeQtyOf(it) : 0), 0);
+}
+/* 택배비 내역 - 품목 수, 총 건수, 건당 단가(모두 같을 때만) */
+function shipBreak(){
+  let items=0, count=0, unit=null, uniform=true;
+  for(const it of state.items){
+    if(!it.name || !(it.fee>0)) continue;
+    items++; count += feeQtyOf(it);
+    if(unit===null) unit=it.fee; else if(unit!==it.fee) uniform=false;
+  }
+  return { items, count, unit: uniform ? unit : null };
 }
 
 function totals(){
@@ -758,8 +778,9 @@ function recalc(){
     state.ship.amount = autoShip();
     $('shipAmount').value = won(state.ship.amount);
   }
-  const n = state.items.filter(i=>i.name && i.fee>0).length;
-  $('shipDesc').value = state.ship.manual ? '직접 입력' : (n?`품목 ${n}건 합산`:'없음');
+  const sb = shipBreak();
+  $('shipDesc').value = state.ship.manual ? '직접 입력'
+    : (sb.items ? `품목 ${sb.items}건 · 택배 ${sb.count}건 합산` : '없음');
 
   [...$('itemRows').children].forEach((row,i)=>{
     const a=row.querySelector('.amt');
@@ -811,13 +832,18 @@ function renderPaper(){
     </tr>`);
   });
   if(state.ship.include && t.ship>0){
+    /* 건당 택배비가 모두 같으면 수량 × 단가로 풀어 쓰고, 섞여 있으면 합계만 적는다 */
+    const sb = shipBreak();
+    const shipQty  = state.ship.manual ? 1 : (sb.count||1);
+    const shipUnit = state.ship.manual ? t.ship
+                   : (sb.unit!==null && sb.count ? sb.unit : null);
     rows.push(`<tr class="ship">
       <td class="c">${d.getMonth()+1}/${d.getDate()}</td>
       <td class="nm">택배비</td>
       <td class="c">${state.ship.manual?'':'합산'}</td>
       <td class="c">${state.ship.taxable?'과세':'면세'}</td>
-      <td class="n">1</td>
-      <td class="n">${won(t.ship)}</td>
+      <td class="n">${won(shipQty)}</td>
+      <td class="n">${shipUnit!==null?won(shipUnit):''}</td>
       <td class="n">${won(t.ship)}</td>
       <td class="nm" style="font-size:9px">${esc($('shipDesc').value||'')}</td>
     </tr>`);
@@ -1321,7 +1347,14 @@ function loadDraft(){
     Object.assign(state.balance,d.balance||{});
     /* 오래된 임시저장본의 정산 설정은 신뢰하지 않는다 */
     if(d.v!==DRAFT_V) state.ship.taxable = true;
-    if(Array.isArray(d.items)&&d.items.length) state.items=d.items;
+    /* 예전 임시저장본에는 택배 건수가 없으므로 기본값으로 채워 넣는다 */
+    if(Array.isArray(d.items)&&d.items.length){
+      state.items = d.items.map(it=>{
+        const m = Object.assign(blankItem(), it);
+        m.feeQty = feeQtyOf(m);
+        return m;
+      });
+    }
     return true;
   }catch(e){ return false; }
 }
