@@ -38,8 +38,10 @@ georae-myeongseseo/          <- 저장소 루트 (여기서 작업)
 ├── index.html               소스. 이 파일을 고칩니다
 ├── products.js              상품 DB (빌드 때 index.html 안으로 들어감)
 ├── build.py                 빌드 스크립트
-├── parse_sheet.py           구글시트 덤프 -> products.js 변환
+├── fetch_products.py        연동 주소로 받아온 JSON -> products.js 변환 (권장)
+├── parse_sheet.py           구글시트 덤프 -> products.js 변환 (예전 방식)
 ├── apps-script.gs           구글시트 연동용 (시트에 붙여넣는 코드)
+├── test_apps_script.js      단가 규칙 검증 (node test_apps_script.js)
 ├── version.json             빌드 번호 (자동 관리, 손대지 마세요)
 └── docs/                    빌드 결과. GitHub Pages 가 이 폴더를 서빙합니다
     ├── index.html           단일 파일로 합쳐진 배포본 (직접 고치지 마세요)
@@ -120,6 +122,21 @@ A4 세로 기준이며, 여백은 `기본`, 배경 그래픽을 켜면 표 음�
 5. 웹앱 → `↻ 상품 새로고침` → 연동 주소에 붙여넣기 → `지금 가져오기`
 
 이후로는 `↻ 상품 새로고침` 버튼만 누르면 최신 단가가 반영됩니다.
+
+### 앱에 들어가는 기본 상품 DB 갱신하기
+
+새로고침은 **누른 브라우저에만** 적용됩니다. 앱을 처음 열었을 때 나오는 기본 상품 목록까지
+바꾸려면 저장소의 `products.js` 를 갱신해서 배포해야 합니다.
+
+```bash
+curl -sL "<웹 앱 URL>" -o fetched.json
+python fetch_products.py fetched.json
+python build.py
+git add -A && git commit -m "상품 단가 갱신" && git push
+```
+
+`fetch_products.py` 는 같은 창고 안에서 단가가 갈리는 상품이 있으면 목록으로 알려줍니다.
+그런 상품은 시트를 고쳐야 정리됩니다.
 
 ## 확인이 필요한 부분
 
