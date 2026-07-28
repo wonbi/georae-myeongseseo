@@ -85,11 +85,13 @@ def main():
 
     # 4) 원본 소스도 dist/source 로 복사해 함께 백업되게 한다
     #    (dist 폴더만 git 저장소이므로, 이렇게 해야 원본이 유실되지 않습니다)
+    #    products.js 는 index.html 이 참조하므로 빠지면 빌드 자체가 안 됩니다.
+    #    저장소만 새로 받은 PC에서도 바로 빌드되도록 반드시 포함시킵니다.
     src_dir = os.path.join(DIST, "source")
     os.makedirs(src_dir, exist_ok=True)
     copied = []
-    for name in ("index.html", "build.py", "parse_sheet.py", "apps-script.gs",
-                 "README.md", "products.json", "version.json"):
+    for name in ("index.html", "products.js", "build.py", "parse_sheet.py",
+                 "apps-script.gs", "README.md", "products.json", "version.json"):
         p = os.path.join(BASE, name)
         if not os.path.exists(p):
             continue
