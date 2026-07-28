@@ -116,6 +116,33 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--ink)}
 }
 .itemRow .del:hover{background:#fdecea;color:var(--danger)}
 .itemRow.edited input.px{border-color:#e8b465;background:#fffaf1}
+
+/* 시트에 단가가 두 개 이상 적혀 있는 상품 - 고를 때까지 짚어준다 */
+.itemRow.unsure input.px{border-color:var(--warn);background:#fff6ec}
+.altBar{display:none}
+.altBar.open{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+  margin:-1px 0 7px;padding:5px 8px;border-radius:5px;
+  background:#fdf3e7;border:1px solid #f0d5b0;font-size:11px;color:#7a4409;
+}
+.altBar .lbl{font-weight:700}
+.altBar .why{color:#96693a}
+.altBar .altPick{
+  border:1px solid #dcb98a;background:#fff;color:#7a4409;
+  padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;
+  font-variant-numeric:tabular-nums;cursor:pointer;
+}
+.altBar .altPick:hover{border-color:var(--warn);background:#fff9f2}
+.altBar .altPick:focus-visible{outline:2px solid var(--warn);outline-offset:1px}
+.altBar .altPick.on{background:var(--warn);border-color:var(--warn);color:#fff}
+.altBar.done{background:#f2f6f4;border-color:#d6e3dc;color:#2f5a47}
+.altBar.done .altPick{border-color:#c3d6cb;color:#2f5a47}
+.altBar.done .altPick.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.acItem .altFlag{
+  margin-left:5px;padding:0 5px;border-radius:3px;flex:none;
+  background:#fdf3e7;color:#8a5212;border:1px solid #f0d5b0;font-size:9.5px;font-weight:700;
+}
+@media print{.altBar{display:none !important}}
 .rowAdd{margin-top:8px;display:flex;gap:6px;align-items:center}
 .hint{font-size:11px;color:var(--muted)}
 
@@ -604,9 +631,15 @@ const state = {
   balance:{ show:false, prev:0, paid:0 }
 };
 
+/* 같은 창고에서 단가가 갈리는 상품의 후보 목록. 하나뿐이면 고를 것이 없다. */
+function altsOf(p){
+  const a = Array.isArray(p && p.alts) ? p.alts.filter(v=>Number(v)>0) : [];
+  return a.length > 1 ? [...new Set(a)].sort((x,y)=>x-y) : [];
+}
+
 function blankItem(){
   return { name:'', spec:'', qty:1, price:0, taxable:false, fee:0, feeQty:1, note:'',
-           warehouse:'', courier:'', auto:false, edited:false };
+           warehouse:'', courier:'', auto:false, edited:false, alts:null, altPicked:false };
 }
 
 /* 상품명 끝의 중량·수량 표기를 규격으로 자동 추출 ("자이언트 전복 1kg" → "1kg") */
@@ -648,7 +681,7 @@ function rowEl(it,idx){
     list.innerHTML=results.map((p,k)=>`
       <div class="acItem${k===sel?' sel':''}" data-k="${k}">
         <span class="wh">${p.warehouse||'-'}</span>
-        <span class="nm">${highlight(p.name,q)}</span>
+        <span class="nm">${highlight(p.name,q)}${altsOf(p).length?'<span class="altFlag">단가 확인</span>':''}</span>
         <span class="tx ${p.taxable?'tax':'free'}">${p.taxable?'과':'면'}</span>
         <span class="fe">${p.fee?won(p.fee):'무료'}</span>
         <span class="pr">${won(p.price)}</span>
@@ -664,6 +697,8 @@ function rowEl(it,idx){
     it.note=p.courier||'';
     it.spec=guessSpec(p.name);
     it.auto=true; it.edited=false;
+    /* 시트에 단가가 두 개 이상 적혀 있으면 임의로 정하지 않고 고르게 한다 */
+    it.alts=altsOf(p); it.altPicked=false;
     closeList(); renderRows(); recalc();
     const rows=$('itemRows').children;
     const next=rows[idx+1] ? rows[idx+1].querySelector('input') : null;
@@ -705,7 +740,11 @@ function rowEl(it,idx){
   };
   const spec = mk(it.spec,'', '', v=>{ it.spec=v; recalc(); });
   const qty  = mk(it.qty ,'num','', v=>{ it.qty=numOf(v); recalc(); });
-  const price= mk(it.price?won(it.price):'', 'num px','', v=>{ it.price=numOf(v); it.edited=true; row.classList.add('edited'); recalc(); });
+  const price= mk(it.price?won(it.price):'', 'num px','', v=>{
+    it.price=numOf(v); it.edited=true; row.classList.add('edited');
+    it.altPicked=true; paintAlts();   /* 직접 적었으면 단가는 정해진 것으로 본다 */
+    recalc();
+  });
   price.addEventListener('blur',()=>{ price.value = it.price?won(it.price):''; });
   price.addEventListener('focus',()=>{ price.value = it.price||''; });
 
@@ -732,7 +771,32 @@ function rowEl(it,idx){
   del.addEventListener('click',()=>{ state.items.splice(idx,1); if(!state.items.length) state.items.push(blankItem()); renderRows(); recalc(); });
 
   row.append(wrap,spec,qty,price,tax,fee,feeQty,note,amt,del);
-  return row;
+
+  /* 시트에 단가가 여러 개 적힌 상품은 고를 때까지 행을 짚어둔다.
+     예전에는 조용히 첫 번째(대개 싼) 값이 들어가 명세서가 틀린 채로 나갔다. */
+  const altBar=document.createElement('div');
+  const paintAlts=()=>{
+    const alts=altsOf(it);
+    row.classList.toggle('unsure', alts.length>0 && !it.altPicked);
+    if(!alts.length){ altBar.className='altBar'; altBar.textContent=''; return; }
+    const done=!!it.altPicked;
+    altBar.className='altBar open'+(done?' done':'');
+    altBar.innerHTML =
+      `<span class="lbl">${done?'단가 선택함':'시트에 단가가 두 개'}</span>`
+      + alts.map(v=>`<button type="button" class="altPick${v===it.price?' on':''}" data-p="${v}">${won(v)}</button>`).join('')
+      + `<span class="why">${done?'':'맞는 쪽을 눌러 정하세요'}</span>`;
+  };
+  altBar.addEventListener('click',e=>{
+    const b=e.target.closest('.altPick'); if(!b) return;
+    it.price=+b.dataset.p; it.altPicked=true;
+    price.value=won(it.price);
+    paintAlts(); recalc();
+  });
+  paintAlts();
+
+  const box=document.createElement('div');
+  box.append(row,altBar);
+  return box;
 }
 
 /* =========================================================
@@ -1396,7 +1460,7 @@ window.addEventListener('resize',applyZoom);
   /* 빌드할 때 build.py 가 아래 토큰을 실제 버전으로 바꿔 넣는다.
      바뀌지 않았다면 빌드를 거치지 않은 개발본이라는 뜻이다. */
   (function(){
-    const v = 'v1.7', t = '2026-07-28 20:20';
+    const v = 'v1.8', t = '2026-07-28 12:34';
     const dev = v.indexOf('__') === 0;
     $('verChip').textContent = dev ? '개발본' : v;
     $('verChip').title = dev ? '빌드를 거치지 않은 로컬 파일입니다'
