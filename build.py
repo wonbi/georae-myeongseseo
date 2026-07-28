@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-배포본 빌드 - index.html + products.js 를 파일 하나로 합칩니다.
+배포본 빌드 - index.html + products.js 를 파일 하나로 합쳐 docs/ 에 넣습니다.
 
     python build.py
 
-결과: dist/index.html (단일 파일), dist/robots.txt, dist/_headers
-상품 정보를 갱신한 뒤 이 스크립트를 다시 실행하면 배포본도 갱신됩니다.
+이 폴더가 곧 git 저장소 루트이고, GitHub Pages 는 docs/ 폴더를 서빙합니다.
+따라서 어느 PC에서든 clone 한 뒤 소스를 고치고 이 스크립트를 돌리면 됩니다.
+
+    git clone https://github.com/wonbi/georae-myeongseseo.git
+    cd georae-myeongseseo
+    (index.html 수정)
+    python build.py
+    git add -A && git commit -m "..." && git push
 """
 import json
 import os
@@ -14,7 +20,7 @@ import sys
 from datetime import datetime
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DIST = os.path.join(BASE, "dist")
+DIST = os.path.join(BASE, "docs")          # GitHub Pages 서빙 폴더
 VERSION_FILE = os.path.join(BASE, "version.json")
 
 MAJOR = 1  # 큰 변경이 있을 때만 손으로 올립니다
@@ -83,30 +89,14 @@ def main():
     with open(os.path.join(DIST, "_headers"), "w", encoding="utf-8") as f:
         f.write("/*\n  X-Robots-Tag: noindex, nofollow\n")
 
-    # 4) 원본 소스도 dist/source 로 복사해 함께 백업되게 한다
-    #    (dist 폴더만 git 저장소이므로, 이렇게 해야 원본이 유실되지 않습니다)
-    #    products.js 는 index.html 이 참조하므로 빠지면 빌드 자체가 안 됩니다.
-    #    저장소만 새로 받은 PC에서도 바로 빌드되도록 반드시 포함시킵니다.
-    src_dir = os.path.join(DIST, "source")
-    os.makedirs(src_dir, exist_ok=True)
-    copied = []
-    for name in ("index.html", "products.js", "build.py", "parse_sheet.py",
-                 "apps-script.gs", "README.md", "products.json", "version.json"):
-        p = os.path.join(BASE, name)
-        if not os.path.exists(p):
-            continue
-        with open(p, "rb") as fr, open(os.path.join(src_dir, name), "wb") as fw:
-            fw.write(fr.read())
-        copied.append(name)
-
+    # 소스가 저장소 루트에 그대로 있으므로 따로 백업할 필요가 없습니다.
     n = len(re.findall(r'"name":', products))
     size = os.path.getsize(out)
     print("버전 %s  (%s 빌드)" % (version, built_at))
-    print("dist/index.html  %6.1f KB  (상품 %d개 포함)" % (size / 1024, n))
-    print("dist/robots.txt  검색엔진 차단")
-    print("dist/_headers    X-Robots-Tag 차단")
-    print("dist/source/     원본 %d개 백업 (%s)" % (len(copied), ", ".join(copied)))
-    print("\n완료 - dist 폴더를 통째로 배포하세요.")
+    print("docs/index.html  %6.1f KB  (상품 %d개 포함)" % (size / 1024, n))
+    print("docs/robots.txt  검색엔진 차단")
+    print("docs/_headers    X-Robots-Tag 차단")
+    print("\n완료 - git add -A && git commit && git push 하면 배포됩니다.")
 
 
 if __name__ == "__main__":
